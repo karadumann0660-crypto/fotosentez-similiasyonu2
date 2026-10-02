@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Tam Fotosentez: ETS, Fotoliz, ATP Sentezi ve Calvin Döngüsü</title>
+    <title>3D Gelişmiş Fotosentez Mekanizması & Calvin Döngüsü</title>
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #03120e; color: #fff; transition: background 0.5s ease; }
@@ -37,7 +37,7 @@
 <body>
     <div id="canvas-container"></div>
     <div id="ui-panel">
-        <h2>Tam Fotosentez Mekanizması</h2>
+        <h2>3D Fotosentez & Calvin Döngüsü</h2>
 
         <div class="btn-group">
             <button class="btn" id="dayNightBtn">🌙 Gece Modu</button>
@@ -49,9 +49,9 @@
         </div>
 
         <div class="control-group">
-            <label>Işık Türü / Dalga Boyu:</label>
+            <label>Işık Türü / Spektrum:</label>
             <select id="lightColorSelect">
-                <option value="680">Kırmızı Işık (680nm - PS II & PS I Maksimum)</option>
+                <option value="680">Kırmızı Işık (680nm - Yüksek Verim)</option>
                 <option value="450">Mavi Işık (450nm - Yüksek Verim)</option>
                 <option value="530">Yeşil Işık (530nm - Yansıtılır / Düşük Verim)</option>
                 <option value="580">Sarı Işık (580nm - Orta Verim)</option>
@@ -65,7 +65,7 @@
         </div>
 
         <div class="control-group">
-            <label><span>CO₂ Miktarı (Calvin):</span> <span id="co2-val">50%</span></label>
+            <label><span>CO₂ Miktarı (Calvin Girdisi):</span> <span id="co2-val">50%</span></label>
             <input type="range" id="co2Slider" min="0" max="100" value="50">
         </div>
 
@@ -85,10 +85,10 @@
             <div class="stage-title">2. Işıktan Bağımsız Evre (Stroma / Calvin)</div>
             <div class="metric"><span>Harcanan ATP / NADPH:</span> <span id="atpVal" class="metric-val">0 / 0</span></div>
             <div class="metric"><span>Üretilen Glikoz (C₆H₁₂O₆):</span> <span id="glucoseVal" class="metric-val">0.0 mg</span></div>
-            <div class="metric"><span>Çıkan O₂ Gazı:</span> <span id="o2Val" class="metric-val">0.0 ml</span></div>
+            <div class="metric"><span>Açığa Çıkan O₂:</span> <span id="o2Val" class="metric-val">0.0 ml</span></div>
         </div>
     </div>
-    <div id="instructions">Kloroplast içindeki ETS zincirini, ATP Sentaz motorunu ve Calvin döngüsünü 360° inceleyebilirsiniz.</div>
+    <div id="instructions">Kloroplast içindeki ETS zincirini, ATP Sentaz motorunu ve Calvin Döngüsünü 360° inceleyebilirsiniz.</div>
 
     <script>
         const container = document.getElementById('canvas-container');
@@ -106,7 +106,6 @@
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
 
-        // --- IŞIKLAR ---
         const ambientLight = new THREE.AmbientLight(0x14532d, 0.8);
         scene.add(ambientLight);
 
@@ -114,7 +113,7 @@
         lightSource.position.set(0, 12, 4);
         scene.add(lightSource);
 
-        // --- HÜCRE İÇİ ORTAM ---
+        // Canlı Hücre İçi Parçacık Atmosferi
         const bgParticlesGeo = new THREE.BufferGeometry();
         const bgCount = 400;
         const posArray = new Float32Array(bgCount * 3);
@@ -128,10 +127,10 @@
         const bgMesh = new THREE.Points(bgParticlesGeo, bgParticlesMat);
         scene.add(bgMesh);
 
-        // --- YAPRAK DOKUSU ---
+        // Yaprak Dokusu Katmanları
         const leafGroup = new THREE.Group();
 
-        // 1. Kutikula
+        // 1. Kutikula Tabakası
         const cuticleGeo = new THREE.BoxGeometry(11, 0.1, 7);
         const cuticleMat = new THREE.MeshPhongMaterial({ color: 0xa7f3d0, transparent: true, opacity: 0.35, shininess: 100 });
         const cuticle = new THREE.Mesh(cuticleGeo, cuticleMat);
@@ -161,7 +160,7 @@
             }
         }
 
-        // 4. DETAYLI KLOROPLAST MODELİ (ETS, ATP Sentaz & Calvin)
+        // 4. Detaylı Kloroplast Modeli
         const chloroplastGroup = new THREE.Group();
         const outerGeo = new THREE.SphereGeometry(2.6, 32, 16);
         outerGeo.scale(1.5, 0.65, 1);
@@ -169,7 +168,6 @@
         const outerMesh = new THREE.Mesh(outerGeo, outerMat);
         chloroplastGroup.add(outerMesh);
 
-        // Granum / Tilakoit Kuleleri
         function createGranumStack(x, z) {
             const granum = new THREE.Group();
             const stackHeight = 5 + Math.floor(Math.random()*3);
@@ -186,9 +184,9 @@
         const granumPositions = [[-1.4, 0], [-0.5, -0.4], [0.5, -0.3], [1.4, 0.1]];
         granumPositions.forEach(pos => chloroplastGroup.add(createGranumStack(pos[0], pos[1])));
 
-        // --- 3D ETS ELEKTRON TAŞIMA ZİNCİRİ (PROTEİN KOMPLEKSLERİ) ---
+        // ETS Protein Kompleksleri
         const etsGroup = new THREE.Group();
-        const etsColors = [0x3b82f6, 0xeab308, 0xef4444, 0x10b981]; // PSII, Plastokinon, Sitokrom b6f, PSI
+        const etsColors = [0x3b82f6, 0xeab308, 0xef4444, 0x10b981];
         for(let i=0; i<4; i++) {
             const compGeo = new THREE.BoxGeometry(0.25, 0.35, 0.25);
             const compMat = new THREE.MeshPhongMaterial({ color: etsColors[i], shininess: 80 });
@@ -197,14 +195,13 @@
             etsGroup.add(comp);
         }
 
-        // Akıcı Elektronlar (e-)
         const electronGeo = new THREE.SphereGeometry(0.05, 12, 12);
         const electronMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
         const electronMesh = new THREE.Mesh(electronGeo, electronMat);
         electronMesh.position.set(-1.2, 0.4, 0.4);
         etsGroup.add(electronMesh);
 
-        // --- 3D ATP SENTAZ MOTORU (KEMİOSMOZ) ---
+        // ATP Sentaz Motoru
         const atpSynthGroup = new THREE.Group();
         const headGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.3, 16);
         const headMat = new THREE.MeshPhongMaterial({ color: 0x38bdf8, shininess: 100 });
@@ -213,7 +210,7 @@
         atpSynthGroup.position.set(1.1, 0.3, 0.4);
         chloroplastGroup.add(atpSynthGroup);
 
-        // --- 3D CALVIN DÖNGÜSÜ HALKASI (STROMA) ---
+        // 3D Calvin Döngüsü Halkası
         const calvinGroup = new THREE.Group();
         const ringGeo = new THREE.TorusGeometry(1.05, 0.04, 16, 50);
         const ringMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, wireframe: true });
@@ -268,7 +265,7 @@
 
         scene.add(leafGroup);
 
-        // --- HAREKETLİ O2 MOLEKÜLLERİ ---
+        // O2 Parçacıkları
         const o2Geo = new THREE.SphereGeometry(0.09, 12, 12);
         const o2Mat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
         const o2Particles = [];
@@ -281,7 +278,6 @@
             scene.add(p);
         }
 
-        // --- DEĞİŞKENLER VE RENK AYARLARI ---
         let lightVal = 60, selectedColor = "680", tempVal = 25, co2Val = 50, h2oVal = 80;
         let glucose = 0, o2 = 0, atp = 0;
 
@@ -339,7 +335,6 @@
 
         let ePos = -1.2;
 
-        // --- ANİMASYON DÖNGÜSÜ ---
         function animate() {
             requestAnimationFrame(animate);
 
@@ -359,16 +354,12 @@
 
             document.getElementById('rateVal').innerText = '%' + Math.round(rate);
 
-            // 1. ETS ELEKTRON ANİMASYONU
             if (rate > 0) {
                 ePos += 0.015 * (rate / 50);
                 if(ePos > 0.15) ePos = -1.2;
                 electronMesh.position.x = ePos;
 
-                // 2. ATP SENTAZ MOTOR DÖNÜŞÜ
                 atpHead.rotation.y += 0.05 * (rate / 50);
-
-                // 3. CALVIN DÖNGÜSÜ DÖNÜŞÜ
                 calvinGroup.rotation.y += (rate / 100) * 0.04 + 0.002;
 
                 glucose += rate * 0.0008;
