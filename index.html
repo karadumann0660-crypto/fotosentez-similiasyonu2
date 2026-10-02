@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Tam Fotosentez: ETS, Fotoliz, ATP Sentezi ve Calvin Döngüsü</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #03120e; color: #fff; transition: background 0.5s ease; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        #ui-panel {
+            position: absolute; top: 15px; left: 15px; width: 350px; max-height: calc(100vh - 30px); overflow-y: auto;
+            background: rgba(8, 28, 21, 0.93); backdrop-filter: blur(12px);
+            padding: 18px; border-radius: 14px; border: 1px solid rgba(74, 222, 128, 0.35);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+        }
+        h2 { margin-top: 0; font-size: 1.1rem; color: #4ade80; text-transform: uppercase; letter-spacing: 1px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; }
+        .control-group { margin-bottom: 12px; }
+        label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px; color: #cbd5e1; }
+        input[type=range], select { width: 100%; cursor: pointer; accent-color: #22c55e; }
+        select { background: #0f291e; color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 6px; border-radius: 6px; }
+        .btn-group { display: flex; gap: 8px; margin-bottom: 12px; }
+        .btn { flex: 1; padding: 8px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; background: #15803d; color: #fff; transition: 0.2s; }
+        .btn:hover { background: #22c55e; }
+        .metric-group { background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px; margin-top: 10px; }
+        .metric { display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 6px; }
+        .metric-val { color: #38bdf8; font-weight: bold; }
+        .stage-title { font-size: 0.78rem; color: #facc15; font-weight: bold; margin-top: 8px; margin-bottom: 4px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 6px; }
+        #instructions {
+            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; color: #86efac; border: 1px solid rgba(34,197,94,0.3); pointer-events: none;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div id="ui-panel">
+        <h2>Tam Fotosentez Mekanizması</h2>
+
+        <div class="btn-group">
+            <button class="btn" id="dayNightBtn">🌙 Gece Modu</button>
+        </div>
+        
+        <div class="control-group">
+            <label><span>Işık Şiddeti (Foton Akısı):</span> <span id="light-val">60%</span></label>
+            <input type="range" id="lightSlider" min="0" max="100" value="60">
+        </div>
+
+        <div class="control-group">
+            <label>Işık Türü / Dalga Boyu:</label>
+            <select id="lightColorSelect">
+                <option value="680">Kırmızı Işık (680nm - PS II & PS I Maksimum)</option>
+                <option value="450">Mavi Işık (450nm - Yüksek Verim)</option>
+                <option value="530">Yeşil Işık (530nm - Yansıtılır / Düşük Verim)</option>
+                <option value="580">Sarı Işık (580nm - Orta Verim)</option>
+                <option value="white">Güneş Işığı (Beyaz Spektrum)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label><span>Sıcaklık:</span> <span id="temp-val">25°C</span></label>
+            <input type="range" id="tempSlider" min="0" max="50" value="25">
+        </div>
+
+        <div class="control-group">
+            <label><span>CO₂ Miktarı (Calvin):</span> <span id="co2-val">50%</span></label>
+            <input type="range" id="co2Slider" min="0" max="100" value="50">
+        </div>
+
+        <div class="control-group">
+            <label><span>Su (H₂O) Miktarı (Fotoliz):</span> <span id="h2o-val">80%</span></label>
+            <input type="range" id="h2oSlider" min="0" max="100" value="80">
+        </div>
+
+        <div class="metric-group">
+            <div class="metric"><span>Toplam Fotosentez Hızı:</span> <span id="rateVal" class="metric-val">%0</span></div>
+            
+            <div class="stage-title">1. Işığa Bağımlı Evre (Tilakoit Zar)</div>
+            <div class="metric"><span>Suyun Fotolizi (H₂O):</span> <span id="photolysisVal" class="metric-val" style="color:#4ade80;">Aktif (O₂ Açığa Çıkıyor)</span></div>
+            <div class="metric"><span>ETS Elektron Akışı:</span> <span id="etsVal" class="metric-val" style="color:#eab308;">Akan e⁻ Aktif</span></div>
+            <div class="metric"><span>ATP Sentaz (Kemiosmoz):</span> <span id="atpSynthVal" class="metric-val" style="color:#38bdf8;">ATP & NADPH Üretiliyor</span></div>
+
+            <div class="stage-title">2. Işıktan Bağımsız Evre (Stroma / Calvin)</div>
+            <div class="metric"><span>Harcanan ATP / NADPH:</span> <span id="atpVal" class="metric-val">0 / 0</span></div>
+            <div class="metric"><span>Üretilen Glikoz (C₆H₁₂O₆):</span> <span id="glucoseVal" class="metric-val">0.0 mg</span></div>
+            <div class="metric"><span>Çıkan O₂ Gazı:</span> <span id="o2Val" class="metric-val">0.0 ml</span></div>
+        </div>
+    </div>
+    <div id="instructions">Kloroplast içindeki ETS zincirini, ATP Sentaz motorunu ve Calvin döngüsünü 360° inceleyebilirsiniz.</div>
+
+    <script>
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        let isNight = false;
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 5, 15);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // --- IŞIKLAR ---
+        const ambientLight = new THREE.AmbientLight(0x14532d, 0.8);
+        scene.add(ambientLight);
+
+        const lightSource = new THREE.PointLight(0xef4444, 2.8, 60);
+        lightSource.position.set(0, 12, 4);
+        scene.add(lightSource);
+
+        // --- HÜCRE İÇİ ORTAM ---
+        const bgParticlesGeo = new THREE.BufferGeometry();
+        const bgCount = 400;
+        const posArray = new Float32Array(bgCount * 3);
+        for(let i=0; i<bgCount*3; i+=3) {
+            posArray[i] = (Math.random() - 0.5) * 40;
+            posArray[i+1] = (Math.random() - 0.5) * 40;
+            posArray[i+2] = (Math.random() - 0.5) * 40;
+        }
+        bgParticlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const bgParticlesMat = new THREE.PointsMaterial({ size: 0.14, color: 0x4ade80, transparent: true, opacity: 0.35 });
+        const bgMesh = new THREE.Points(bgParticlesGeo, bgParticlesMat);
+        scene.add(bgMesh);
+
+        // --- YAPRAK DOKUSU ---
+        const leafGroup = new THREE.Group();
+
+        // 1. Kutikula
+        const cuticleGeo = new THREE.BoxGeometry(11, 0.1, 7);
+        const cuticleMat = new THREE.MeshPhongMaterial({ color: 0xa7f3d0, transparent: true, opacity: 0.35, shininess: 100 });
+        const cuticle = new THREE.Mesh(cuticleGeo, cuticleMat);
+        cuticle.position.y = 2.4;
+        leafGroup.add(cuticle);
+
+        // 2. Üst Epidermis
+        const epiMat = new THREE.MeshPhongMaterial({ color: 0x4ade80, transparent: true, opacity: 0.45, shininess: 40 });
+        for(let x = -4.8; x <= 4.8; x += 1.3) {
+            for(let z = -2.6; z <= 2.6; z += 1.3) {
+                const epiCellGeo = new THREE.BoxGeometry(1.15, 0.5, 1.15);
+                const epiCell = new THREE.Mesh(epiCellGeo, epiMat);
+                epiCell.position.set(x, 2.0, z);
+                leafGroup.add(epiCell);
+            }
+        }
+
+        // 3. Palizat Parankiması
+        const palisadeMat = new THREE.MeshPhongMaterial({ color: 0x15803d, transparent: true, opacity: 0.65 });
+        for(let x = -4.5; x <= 4.5; x += 1.1) {
+            for(let z = -2.4; z <= 2.4; z += 1.2) {
+                if(Math.abs(x) < 1.2 && Math.abs(z) < 1.2) continue;
+                const pGeo = new THREE.CylinderGeometry(0.42, 0.42, 1.6, 16);
+                const pCell = new THREE.Mesh(pGeo, palisadeMat);
+                pCell.position.set(x, 0.8, z);
+                leafGroup.add(pCell);
+            }
+        }
+
+        // 4. DETAYLI KLOROPLAST MODELİ (ETS, ATP Sentaz & Calvin)
+        const chloroplastGroup = new THREE.Group();
+        const outerGeo = new THREE.SphereGeometry(2.6, 32, 16);
+        outerGeo.scale(1.5, 0.65, 1);
+        const outerMat = new THREE.MeshPhongMaterial({ color: 0x166534, transparent: true, opacity: 0.32, shininess: 90 });
+        const outerMesh = new THREE.Mesh(outerGeo, outerMat);
+        chloroplastGroup.add(outerMesh);
+
+        // Granum / Tilakoit Kuleleri
+        function createGranumStack(x, z) {
+            const granum = new THREE.Group();
+            const stackHeight = 5 + Math.floor(Math.random()*3);
+            for(let i = 0; i < stackHeight; i++) {
+                const discGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.1, 16);
+                const discMat = new THREE.MeshPhongMaterial({ color: 0x22c55e, shininess: 60 });
+                const disc = new THREE.Mesh(discGeo, discMat);
+                disc.position.set(x, (i * 0.13) - 0.35, z);
+                granum.add(disc);
+            }
+            return granum;
+        }
+
+        const granumPositions = [[-1.4, 0], [-0.5, -0.4], [0.5, -0.3], [1.4, 0.1]];
+        granumPositions.forEach(pos => chloroplastGroup.add(createGranumStack(pos[0], pos[1])));
+
+        // --- 3D ETS ELEKTRON TAŞIMA ZİNCİRİ (PROTEİN KOMPLEKSLERİ) ---
+        const etsGroup = new THREE.Group();
+        const etsColors = [0x3b82f6, 0xeab308, 0xef4444, 0x10b981]; // PSII, Plastokinon, Sitokrom b6f, PSI
+        for(let i=0; i<4; i++) {
+            const compGeo = new THREE.BoxGeometry(0.25, 0.35, 0.25);
+            const compMat = new THREE.MeshPhongMaterial({ color: etsColors[i], shininess: 80 });
+            const comp = new THREE.Mesh(compGeo, compMat);
+            comp.position.set(-1.2 + (i * 0.45), 0.2, 0.4);
+            etsGroup.add(comp);
+        }
+
+        // Akıcı Elektronlar (e-)
+        const electronGeo = new THREE.SphereGeometry(0.05, 12, 12);
+        const electronMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+        const electronMesh = new THREE.Mesh(electronGeo, electronMat);
+        electronMesh.position.set(-1.2, 0.4, 0.4);
+        etsGroup.add(electronMesh);
+
+        // --- 3D ATP SENTAZ MOTORU (KEMİOSMOZ) ---
+        const atpSynthGroup = new THREE.Group();
+        const headGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.3, 16);
+        const headMat = new THREE.MeshPhongMaterial({ color: 0x38bdf8, shininess: 100 });
+        const atpHead = new THREE.Mesh(headGeo, headMat);
+        atpSynthGroup.add(atpHead);
+        atpSynthGroup.position.set(1.1, 0.3, 0.4);
+        chloroplastGroup.add(atpSynthGroup);
+
+        // --- 3D CALVIN DÖNGÜSÜ HALKASI (STROMA) ---
+        const calvinGroup = new THREE.Group();
+        const ringGeo = new THREE.TorusGeometry(1.05, 0.04, 16, 50);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, wireframe: true });
+        const calvinRing = new THREE.Mesh(ringGeo, ringMat);
+        calvinRing.rotation.x = Math.PI / 2;
+        calvinGroup.add(calvinRing);
+
+        const calvinNodes = [];
+        const nodeColors = [0xef4444, 0x38bdf8, 0x38bdf8, 0x4ade80, 0xfacc15];
+        for(let i=0; i<5; i++) {
+            const angle = (i / 5) * Math.PI * 2;
+            const nGeo = new THREE.SphereGeometry(0.11, 16, 16);
+            const nMat = new THREE.MeshPhongMaterial({ color: nodeColors[i] });
+            const node = new THREE.Mesh(nGeo, nMat);
+            node.position.set(Math.cos(angle)*1.05, 0, Math.sin(angle)*1.05);
+            calvinNodes.push(node);
+            calvinGroup.add(node);
+        }
+
+        calvinGroup.position.set(0, 0.8, -0.3);
+        chloroplastGroup.add(etsGroup);
+        leafGroup.add(chloroplastGroup);
+        leafGroup.add(calvinGroup);
+
+        // 5. Sünger Parankiması
+        const spongeMat = new THREE.MeshPhongMaterial({ color: 0x22c55e, transparent: true, opacity: 0.5 });
+        const spongePositions = [[-3.8, -0.6, -1.8], [-2.0, -0.7, 1.5], [2.4, -0.6, -1.4], [4.0, -0.7, 1.8], [-0.8, -0.8, -2.0], [1.2, -0.8, 2.0]];
+        spongePositions.forEach(pos => {
+            const sGeo = new THREE.DodecahedronGeometry(0.7);
+            const sCell = new THREE.Mesh(sGeo, spongeMat);
+            sCell.position.set(pos[0], pos[1], pos[2]);
+            leafGroup.add(sCell);
+        });
+
+        // 6. Stoma Gözenekleri
+        const stomaMat = new THREE.MeshPhongMaterial({ color: 0x84cc16 });
+        function createStoma(x, z) {
+            const stoma = new THREE.Group();
+            const g1 = new THREE.TorusGeometry(0.32, 0.11, 8, 16, Math.PI);
+            const m1 = new THREE.Mesh(g1, stomaMat);
+            m1.rotation.x = Math.PI / 2;
+            m1.position.x = -0.12;
+            const m2 = m1.clone();
+            m2.rotation.z = Math.PI;
+            m2.position.x = 0.12;
+            stoma.add(m1, m2);
+            stoma.position.set(x, -1.6, z);
+            return stoma;
+        }
+        leafGroup.add(createStoma(-2.5, 0.2));
+        leafGroup.add(createStoma(2.5, -0.5));
+
+        scene.add(leafGroup);
+
+        // --- HAREKETLİ O2 MOLEKÜLLERİ ---
+        const o2Geo = new THREE.SphereGeometry(0.09, 12, 12);
+        const o2Mat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+        const o2Particles = [];
+
+        for(let i=0; i<40; i++) {
+            const p = new THREE.Mesh(o2Geo, o2Mat);
+            p.position.set((Math.random()-0.5)*7, (Math.random()-0.5)*3, (Math.random()-0.5)*5);
+            p.userData = { velY: Math.random()*0.02 + 0.01, velX: (Math.random()-0.5)*0.01 };
+            o2Particles.push(p);
+            scene.add(p);
+        }
+
+        // --- DEĞİŞKENLER VE RENK AYARLARI ---
+        let lightVal = 60, selectedColor = "680", tempVal = 25, co2Val = 50, h2oVal = 80;
+        let glucose = 0, o2 = 0, atp = 0;
+
+        function updateSceneColor() {
+            if (isNight) {
+                scene.background = new THREE.Color(0x020617);
+                scene.fog = new THREE.FogExp2(0x020617, 0.03);
+                lightSource.color.setHex(0x1e293b);
+                return;
+            }
+
+            let hexColor = 0xef4444; 
+            let bgHex = 0x1f0505;
+
+            if (selectedColor === "450") { hexColor = 0x3b82f6; bgHex = 0x030f26; }
+            else if (selectedColor === "530") { hexColor = 0x22c55e; bgHex = 0x031c0e; }
+            else if (selectedColor === "580") { hexColor = 0xeab308; bgHex = 0x1c1703; }
+            else if (selectedColor === "white") { hexColor = 0xffffff; bgHex = 0x111827; }
+
+            scene.background = new THREE.Color(bgHex);
+            scene.fog = new THREE.FogExp2(bgHex, 0.025);
+            lightSource.color.setHex(hexColor);
+        }
+
+        document.getElementById('lightSlider').addEventListener('input', (e) => { lightVal = +e.target.value; document.getElementById('light-val').innerText = lightVal + '%'; lightSource.intensity = isNight ? 0 : lightVal / 25; });
+        document.getElementById('lightColorSelect').addEventListener('change', (e) => { selectedColor = e.target.value; updateSceneColor(); });
+        document.getElementById('tempSlider').addEventListener('input', (e) => { tempVal = +e.target.value; document.getElementById('temp-val').innerText = tempVal + '°C'; });
+        document.getElementById('co2Slider').addEventListener('input', (e) => { co2Val = +e.target.value; document.getElementById('co2-val').innerText = co2Val + '%'; });
+        document.getElementById('h2oSlider').addEventListener('input', (e) => { h2oVal = +e.target.value; document.getElementById('h2o-val').innerText = h2oVal + '%'; });
+
+        document.getElementById('dayNightBtn').addEventListener('click', () => {
+            isNight = !isNight;
+            const btn = document.getElementById('dayNightBtn');
+            if (isNight) {
+                btn.innerText = "☀️ Gündüz Modu";
+                btn.style.background = "#ca8a04";
+                lightSource.intensity = 0.1;
+                document.getElementById('photolysisVal').innerText = "Durduruldu (Işık Yok)";
+                document.getElementById('photolysisVal').style.color = "#ef4444";
+                document.getElementById('etsVal').innerText = "Elektron Akışı Durdu";
+                document.getElementById('etsVal').style.color = "#ef4444";
+            } else {
+                btn.innerText = "🌙 Gece Modu";
+                btn.style.background = "#15803d";
+                lightSource.intensity = lightVal / 25;
+                document.getElementById('photolysisVal').innerText = "Aktif (O₂ Açığa Çıkıyor)";
+                document.getElementById('photolysisVal').style.color = "#4ade80";
+                document.getElementById('etsVal').innerText = "Akan e⁻ Aktif";
+                document.getElementById('etsVal').style.color = "#eab308";
+            }
+            updateSceneColor();
+        });
+
+        updateSceneColor();
+
+        let ePos = -1.2;
+
+        // --- ANİMASYON DÖNGÜSÜ ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            leafGroup.rotation.y += 0.002;
+            bgMesh.rotation.y += 0.001;
+
+            let colorEfficiency = 0.8;
+            if (selectedColor === "680" || selectedColor === "450") colorEfficiency = 1.0;
+            else if (selectedColor === "530") colorEfficiency = 0.15;
+            else if (selectedColor === "580") colorEfficiency = 0.5;
+
+            let tempFactor = 1 - Math.abs(tempVal - 25) / 25; tempFactor = Math.max(0, tempFactor);
+            let currentLight = isNight ? 0 : lightVal / 100;
+            
+            let rate = currentLight * colorEfficiency * tempFactor * (co2Val / 100) * (h2oVal / 100) * 100;
+            rate = Math.max(0, rate);
+
+            document.getElementById('rateVal').innerText = '%' + Math.round(rate);
+
+            // 1. ETS ELEKTRON ANİMASYONU
+            if (rate > 0) {
+                ePos += 0.015 * (rate / 50);
+                if(ePos > 0.15) ePos = -1.2;
+                electronMesh.position.x = ePos;
+
+                // 2. ATP SENTAZ MOTOR DÖNÜŞÜ
+                atpHead.rotation.y += 0.05 * (rate / 50);
+
+                // 3. CALVIN DÖNGÜSÜ DÖNÜŞÜ
+                calvinGroup.rotation.y += (rate / 100) * 0.04 + 0.002;
+
+                glucose += rate * 0.0008;
+                o2 += rate * 0.0016;
+                atp += Math.floor(rate * 0.1);
+                document.getElementById('glucoseVal').innerText = glucose.toFixed(2) + ' mg';
+                document.getElementById('o2Val').innerText = o2.toFixed(2) + ' ml';
+                document.getElementById('atpVal').innerText = `${atp} ATP / ${Math.floor(atp*0.66)} NADPH`;
+            }
+
+            o2Particles.forEach(p => {
+                p.position.y += p.userData.velY * (rate / 40);
+                p.position.x += p.userData.velX;
+                if(p.position.y > 4.5) {
+                    p.position.y = -1.8;
+                    p.position.x = (Math.random()-0.5)*6;
+                }
+            });
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
